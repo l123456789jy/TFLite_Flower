@@ -46,6 +46,7 @@ import org.tensorflow.lite.support.tensorbuffer.TensorBuffer;
 
 /** A classifier specialized to label images using TensorFlow Lite. */
 public abstract class Classifier {
+  protected Interpreter tflite;
   private static final Logger LOGGER = new Logger();
 
   /** The runtime device type used for executing classification. */
@@ -175,6 +176,7 @@ public abstract class Classifier {
 
   /** Initializes a {@code Classifier}. */
   protected Classifier(Activity activity, Device device, int numThreads) throws IOException {
+
     tfliteModel = FileUtil.loadMappedFile(activity, getModelPath());
     switch (device) {
       case GPU:
@@ -185,7 +187,7 @@ public abstract class Classifier {
         break;
     }
     tfliteOptions.setNumThreads(numThreads);
-
+    tflite = new Interpreter(tfliteModel, tfliteOptions);
     // TODO: Create a TFLite interpreter instance
 
 
@@ -241,8 +243,11 @@ public abstract class Classifier {
     //       with category labels
 
     Trace.endSection();
-
+    tflite.run(inputImageBuffer.getBuffer(), outputProbabilityBuffer.getBuffer().rewind());
     // Gets top-k results.
+    Map<String, Float> labeledProbability =
+            new TensorLabel(labels, probabilityProcessor.process(outputProbabilityBuffer))
+                    .getMapWithFloatValue();
     return getTopKProbability(labeledProbability);
   }
 
@@ -250,12 +255,10 @@ public abstract class Classifier {
   public void close() {
     if (tflite != null) {
       // TODO: Close the interpreter
-
     }
     // TODO: Close the GPU delegate
-
-
-    tfliteModel = null;
+    tflite.close();
+    tflite = null;
   }
 
   /** Get the image size along the x axis. */
@@ -279,11 +282,11 @@ public abstract class Classifier {
     // TODO: Define an ImageProcessor from TFLite Support Library to do preprocessing
     ImageProcessor imageProcessor =
             new ImageProcessor.Builder()
-
-
-
-
-                .build();
+                    .add(new ResizeWithCropOrPadOp(cropSize, cropSize))
+                    .add(new ResizeOp(imageSizeX, imageSizeY, ResizeMethod.NEAREST_NEIGHBOR))
+                    .add(new Rot90Op(numRoration))
+                    .add(getPreprocessNormalizeOp())
+                    .build();
     return imageProcessor.process(inputImageBuffer);
   }
 

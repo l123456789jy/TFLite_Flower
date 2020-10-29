@@ -6,6 +6,9 @@ assert file(project.ext.ASSET_DIR + "/model.tflite").exists()
 assert file(project.ext.ASSET_DIR + "/labels.txt").exists()
 
 android {
+    aaptOptions {
+        noCompress "tflite"
+    }
     compileSdkVersion 28
     defaultConfig {
         applicationId "org.tensorflow.lite.examples.classification"
@@ -36,7 +39,9 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.0.0'
     implementation 'androidx.coordinatorlayout:coordinatorlayout:1.0.0'
     implementation 'com.google.android.material:material:1.0.0'
-
+    implementation('org.tensorflow:tensorflow-lite:0.0.0-nightly') { changing = true }
+    implementation('org.tensorflow:tensorflow-lite-gpu:0.0.0-nightly') { changing = true }
+    implementation('org.tensorflow:tensorflow-lite-support:0.0.0-nightly') { changing = true }
     // Build off of nightly TensorFlow Lite
     // TODO: Add TFLite dependencies
 
